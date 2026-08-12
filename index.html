@@ -50,6 +50,16 @@
     --orange:#F2C98E;
     --purple:#CDBCE8;
 
+    /* ===== MÀU DÙNG CHO NÚT ===== */
+    --red:#D96B6B;
+    --text:#4A4033;
+    --muted:#827563;
+    --red-bg:#FFF0EF;
+    --green-bg:#EFFAF1;
+    --blue-bg:#EEF6FF;
+    --orange-bg:#FFF6E7;
+    --yellow-bg:#FFF8D9;
+
     /* ===== BÓNG ===== */
     --shadow:
         0 4px 14px rgba(116, 91, 45, 0.10),
@@ -1382,6 +1392,12 @@ async function loadDB(){
                 if(currentUser){
                     render();
 
+                    const approvalModal = document.getElementById("approvalModal");
+                    if(approvalModal && approvalModal.style.display === "flex" &&
+                       (currentUser.role === "teacher" || currentUser.role === "classLeader")){
+                        showApprovalList(currentUser.role);
+                    }
+
                     if(selectedStudentId){
                         const student =
                             getStudent(selectedStudentId);
@@ -2159,9 +2175,9 @@ function renderTable(list){
                 <td>
                     <button
                         class="btn-red"
-                        style="padding:6px 9px"
+                        style="padding:8px 12px;background:#D96B6B;color:#fff;font-weight:700;opacity:1;display:inline-block"
                         onclick="deleteStudent(${student.id})">
-                        Xóa
+                        🗑️ Xóa học sinh
                     </button>
                 </td>
                 `
@@ -2570,18 +2586,18 @@ function renderRecordButtons(student){
         v.innerHTML = `
             <button
                 class="btn-red"
-                style="margin-top:10px"
+                style="margin-top:10px;background:#D96B6B;color:#fff;font-weight:700;opacity:1;display:inline-block"
                 onclick="openRecordModal('violation')">
-                + Thêm vi phạm
+                ⚠️ Ghi vi phạm
             </button>
         `;
 
         g.innerHTML = `
             <button
                 class="btn-green"
-                style="margin-top:10px"
+                style="margin-top:10px;background:#63A879;color:#fff;font-weight:700;opacity:1;display:inline-block"
                 onclick="openRecordModal('good')">
-                + Thêm việc tốt
+                🌟 Ghi việc tốt
             </button>
         `;
 
@@ -2825,38 +2841,42 @@ function submitRecord(){
     };
 
 
-    /* GV hoặc tổ trưởng */
-    if(
-        currentUser.role === "teacher" ||
-        currentUser.role === "leader"
-    ){
+    /* Giáo viên ghi trực tiếp */
+    if(currentUser.role === "teacher"){
 
-        record.status =
-            "approved";
-
-        record.teacherApproved =
-            currentUser.role === "teacher";
-
-        record.classLeaderApproved =
-            currentUser.role === "classLeader";
+        record.status = "approved";
+        record.teacherApproved = true;
+        record.classLeaderApproved = false;
 
         db.records.push(record);
-
         saveDB();
 
         closeModal("recordModal");
-
         render();
 
         if(selectedStudentId)
             openStudent(selectedStudentId);
 
-        alert(
-            "Đã ghi nhận thành công."
-        );
-
+        alert("Đã ghi nhận thành công.");
         return;
+    }
 
+
+    /* Tổ trưởng gửi đề xuất → Giáo viên + Lớp trưởng cùng duyệt */
+    if(currentUser.role === "leader"){
+
+        record.status = "pending";
+        record.teacherApproved = false;
+        record.classLeaderApproved = false;
+
+        db.proposals.push(record);
+        saveDB();
+
+        closeModal("recordModal");
+        render();
+
+        alert("Đã gửi đề xuất. Giáo viên và lớp trưởng sẽ nhận được để duyệt.");
+        return;
     }
 
 
@@ -2881,7 +2901,7 @@ function submitRecord(){
         render();
 
         alert(
-            "Đã gửi đề xuất. Cần lớp trưởng và giáo viên duyệt trong 48 giờ."
+            "Đã gửi đề xuất. Giáo viên và lớp trưởng sẽ duyệt trong 48 giờ."
         );
 
     }
